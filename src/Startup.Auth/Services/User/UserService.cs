@@ -25,8 +25,11 @@ namespace Startup.Auth.Services
 
             user.Email = email;
             user.CreatedAt = DateTime.Now;
-            user.PasswordHash = SecurityHelper.ProducePasswordHash(password).Item1;
-            user.PasswordSalt = SecurityHelper.ProducePasswordHash(password).Item2;
+
+            var passwordItems = SecurityHelper.ProducePasswordHash(password);
+
+            user.PasswordHash = passwordItems.Item1;
+            user.PasswordSalt = passwordItems.Item2;
 
             await _users.InsertOneAsync(user);
         }
