@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Startup.Auth.Models;
+using Startup.Auth.Provider;
 using Startup.Auth.Services;
 
 namespace Startup.Auth
@@ -34,8 +35,15 @@ namespace Startup.Auth
             services.AddSingleton<IStartupAuthDatabaseSettings>(sp =>
                 sp.GetRequiredService<IOptions<StartupAuthDatabaseSettings>>().Value);
 
-            services.AddTransient<IUserService, UserService>();
+            services.Configure<ApplicationSettings>(
+                Configuration.GetSection(nameof(ApplicationSettings)));
 
+            services.AddSingleton<IApplicationSettings>(sp =>
+                sp.GetRequiredService<IOptions<ApplicationSettings>>().Value);
+
+
+            services.AddTransient<IUserService, UserService>();
+            services.AddTransient<IJwtProvider, JwtProvider>();
             services.AddControllers();
         }
 
