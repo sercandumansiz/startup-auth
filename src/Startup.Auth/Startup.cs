@@ -43,7 +43,7 @@ namespace Startup.Auth
 
 
             services.AddTransient<IUserService, UserService>();
-            services.AddTransient<IJwtProvider, JwtProvider>();
+            services.AddSingleton<IJwtProvider, JwtProvider>();
             services.AddControllers();
         }
 
