@@ -1,2 +1,16 @@
-# startup-auth
-I built this web API to use on my side projects which requires register and login.
+# startup-auth 
+This web API provides you a simple auth implementation for your startup or side projects. 👣
+I'll maintain this project regularly because I am also using this web API as an auth system for my side projects. 💪🏽
+
+(I know, you don't want to waste your time with ASP.NET Core Identity and it's HUGE abstraction for your side projects.) 🏔️
+
+## Prerequisites 🔧
+.NET Core 3.1
+MongoDB
+
+## TO-DO's 📜
+- [x] Register
+- [x] Login
+- [ ] Refresh Token
+- [ ] Logout
+- [ ] Better Error Handling
