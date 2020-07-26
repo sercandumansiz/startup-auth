@@ -20,36 +20,72 @@ namespace Startup.Auth.Services
             _users = database.GetCollection<User>(settings.UsersCollectionName);
         }
 
-        public async Task Register(string email, string password)
+        public async Task<BaseModel<bool>> Register(string email, string password)
         {
-            User user = new User();
+            BaseModel<bool> result = new BaseModel<bool>();
 
-            user.Email = email;
-            user.CreatedAt = DateTime.Now;
-
-            var passwordItems = ProducePasswordHash(password);
-
-            user.PasswordHash = passwordItems.Item1;
-            user.PasswordSalt = passwordItems.Item2;
-
-            await _users.InsertOneAsync(user);
-        }
-
-        public async Task<Guid> Login(string email, string password)
-        {
-            User user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
-
-            if (user != null)
+            try
             {
-                bool isVerified = VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt);
+                bool isRegistered = await _users.Find(u => u.Email == email).AnyAsync();
 
-                if (isVerified)
+                if (isRegistered)
                 {
-                    return user.Id;
+                    result.HasError = true;
+                    result.ErrorMessage = "This e-mail address is already registered.";
+
+                    return result;
                 }
+
+                User user = new User();
+                user.Email = email;
+                user.CreatedAt = DateTime.Now;
+
+                var passwordItems = ProducePasswordHash(password);
+
+                user.PasswordHash = passwordItems.Item1;
+                user.PasswordSalt = passwordItems.Item2;
+
+                await _users.InsertOneAsync(user);
+
+                result.Data = true;
+            }
+            catch
+            {
+                throw new SystemException("Something went wrong while registering user.");
             }
 
-            return Guid.Empty;
+            return result;
+        }
+
+        public async Task<BaseModel<UserModel>> Login(string email, string password)
+        {
+            BaseModel<UserModel> result = new BaseModel<UserModel>();
+
+            try
+            {
+                User user = await _users.Find(u => u.Email == email).FirstOrDefaultAsync();
+
+                if (user != null)
+                {
+                    bool isVerified = VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt);
+
+                    if (isVerified)
+                    {
+                        result.Data = new UserModel
+                        {
+                            Id = user.Id,
+                            Email = user.Email,
+                            CreatedAt = user.CreatedAt
+                        };
+                    }
+                }
+            }
+            catch
+            {
+                throw new SystemException("Something went wrong while verifiying user.");
+            }
+
+            return result;
         }
 
         private (byte[], byte[]) ProducePasswordHash(string password)

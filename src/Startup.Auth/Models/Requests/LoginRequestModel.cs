@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Startup.Auth.Models.Requests
 {
     public class LoginRequestModel
