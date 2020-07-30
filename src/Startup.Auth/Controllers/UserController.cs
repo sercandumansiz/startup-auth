@@ -66,7 +66,7 @@ namespace Startup.Auth.Controllers
                 return Unauthorized();
             }
 
-            string token = _jwtProvider.GenerateToken(result.Data.Id);
+            string token = _jwtProvider.GenerateToken(result.Data);
 
             LoginResponseModel loginResponseModel = new LoginResponseModel();
 
@@ -75,7 +75,8 @@ namespace Startup.Auth.Controllers
             {
                 Id = result.Data.Id,
                 Email = result.Data.Email,
-                CreatedAt = result.Data.CreatedAt
+                CreatedAt = result.Data.CreatedAt,
+                Type = result.Data.Type
             };
 
             return Ok(loginResponseModel);

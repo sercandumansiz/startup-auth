@@ -75,7 +75,8 @@ namespace Startup.Auth.Services
                         {
                             Id = user.Id,
                             Email = user.Email,
-                            CreatedAt = user.CreatedAt
+                            CreatedAt = user.CreatedAt,
+                            Type = user.Type
                         };
                     }
                 }

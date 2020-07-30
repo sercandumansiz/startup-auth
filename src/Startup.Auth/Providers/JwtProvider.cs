@@ -10,7 +10,7 @@ namespace Startup.Auth.Provider
 {
     public interface IJwtProvider
     {
-        string GenerateToken(Guid userId);
+        string GenerateToken(UserModel user);
     }
     public class JwtProvider : IJwtProvider
     {
@@ -19,7 +19,7 @@ namespace Startup.Auth.Provider
         {
             _applicationSettings = applicationSettings;
         }
-        public string GenerateToken(Guid userId)
+        public string GenerateToken(UserModel user)
         {
             SymmetricSecurityKey securityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_applicationSettings.Secret));
 
@@ -27,7 +27,8 @@ namespace Startup.Auth.Provider
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Role, user.Type),
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature)

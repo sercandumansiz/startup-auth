@@ -7,5 +7,6 @@ namespace Startup.Auth.Models.Responses
         public Guid Id { get; set; }
         public string Email { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string Type { get; set; }
     }
 }
