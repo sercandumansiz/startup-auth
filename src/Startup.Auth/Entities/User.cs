@@ -1,5 +1,6 @@
 using System;
 using MongoDB.Bson.Serialization.Attributes;
+using Startup.Auth.Constants;
 
 namespace Startup.Auth.Entities
 {
@@ -18,6 +19,8 @@ namespace Startup.Auth.Entities
         public DateTime CreatedAt { get; set; }
         [BsonElement("LoginType")]
         public LoginType LoginType { get; set; } = LoginType.Internal;
+        [BsonElement("Role")]
+        public string Type { get; set; } = Role.Observer;
     }
 
     public enum LoginType
