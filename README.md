@@ -12,6 +12,9 @@ MongoDB
 ## TO-DO's 📜
 - [x] Register
 - [x] Login
-- [ ] Refresh Token
-- [ ] Logout
+- [x] Refresh Token
+- [x] Logout
+- [ ] Performance Optimization
+- [ ] Remove Unnecassary Codes
 - [ ] Better Error Handling
+- [ ] Write Unit Tests
