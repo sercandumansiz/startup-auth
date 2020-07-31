@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Startup.Auth.Models;
@@ -66,11 +67,11 @@ namespace Startup.Auth.Controllers
                 return Unauthorized();
             }
 
-            string token = _jwtProvider.GenerateToken(result.Data);
-
             LoginResponseModel loginResponseModel = new LoginResponseModel();
 
-            loginResponseModel.Token = token;
+            loginResponseModel.Token = result.Data.Token;
+            loginResponseModel.RefreshToken = result.Data.RefreshToken;
+
             loginResponseModel.User = new UserResponseModel()
             {
                 Id = result.Data.Id,
@@ -80,6 +81,81 @@ namespace Startup.Auth.Controllers
             };
 
             return Ok(loginResponseModel);
+        }
+
+        [HttpGet("token/{refreshToken}/refresh")]
+        public async Task<IActionResult> RefreshToken([FromRoute] string refreshToken)
+        {
+            // TODO : better model validation  
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return BadRequest(new { error = "RefreshToken is empty or null." });
+            }
+
+            BaseModel<UserModel> result = await _userService.RefreshAccessToken(refreshToken);
+
+            if (result.HasError)
+            {
+                return BadRequest(new { error = result.ErrorMessage });
+            }
+
+            if (result.Data == null)
+            {
+                return BadRequest();
+            }
+
+            LoginResponseModel loginResponseModel = new LoginResponseModel();
+
+            loginResponseModel.Token = result.Data.Token;
+            loginResponseModel.RefreshToken = result.Data.RefreshToken;
+
+            loginResponseModel.User = new UserResponseModel()
+            {
+                Id = result.Data.Id,
+                Email = result.Data.Email,
+                CreatedAt = result.Data.CreatedAt,
+                Type = result.Data.Type
+            };
+
+            return Ok(loginResponseModel);
+        }
+
+        [HttpPost("{id}/logout")]
+        public async Task<IActionResult> Logout([FromRoute] Guid id, [FromBody] LogoutRequestModel request)
+        {
+            // TODO : better model validation  
+            if (id == Guid.Empty || string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest();
+            }
+
+            BaseModel<bool> result = await _userService.Logout(id, request.Token, request.RefreshToken);
+
+            if (result.HasError || !result.Data)
+            {
+                return BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Ok();
+        }
+
+        [HttpGet("introspect/{token}")]
+        public async Task<IActionResult> Introspect([FromRoute] string token)
+        {
+            // TODO : better model validation  
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest();
+            }
+
+            BaseModel<bool> result = await _userService.Introspect(token);
+
+            if (result.Data)
+            {
+                return Unauthorized();
+            }
+
+            return Ok();
         }
     }
 }

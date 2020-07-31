@@ -5,19 +5,31 @@ using System.Threading.Tasks;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Startup.Auth.Provider;
 
 namespace Startup.Auth.Services
 {
     public class UserService : IUserService
     {
         private readonly IMongoCollection<User> _users;
+        private readonly IMongoCollection<UserRefreshToken> _userRefreshTokens;
+        private readonly IMongoCollection<InvalidToken> _invalidTokens;
+        private readonly IPasswordHasher<User> _passwordHasher;
+        private readonly IJwtProvider _jwtProvider;
 
-        public UserService(IStartupAuthDatabaseSettings settings)
+
+        public UserService(IStartupAuthDatabaseSettings settings, IPasswordHasher<User> passwordHasher, IJwtProvider jwtProvider)
         {
             var client = new MongoClient(settings.ConnectionString);
             var database = client.GetDatabase(settings.DatabaseName);
 
             _users = database.GetCollection<User>(settings.UsersCollectionName);
+            _userRefreshTokens = database.GetCollection<UserRefreshToken>(settings.AuthsCollectionName);
+            _invalidTokens = database.GetCollection<InvalidToken>(settings.InvalidTokensCollectionName);
+
+            _passwordHasher = passwordHasher;
+            _jwtProvider = jwtProvider;
         }
 
         public async Task<BaseModel<bool>> Register(string email, string password)
@@ -71,19 +83,134 @@ namespace Startup.Auth.Services
 
                     if (isVerified)
                     {
+                        string refreshToken = _passwordHasher.HashPassword(user, Guid.NewGuid().ToString())
+                        .Replace("+", string.Empty)
+                        .Replace("=", string.Empty)
+                        .Replace("/", string.Empty);
+
+                        UserRefreshToken userRefreshToken = new UserRefreshToken()
+                        {
+                            UserId = user.Id,
+                            RefreshToken = refreshToken
+                        };
+
+                        await _userRefreshTokens.InsertOneAsync(userRefreshToken);
+
                         result.Data = new UserModel
                         {
                             Id = user.Id,
                             Email = user.Email,
                             CreatedAt = user.CreatedAt,
-                            Type = user.Type
+                            Type = user.Type,
+                            RefreshToken = refreshToken
                         };
+
+                        string token = _jwtProvider.GenerateToken(result.Data);
+
+                        result.Data.Token = token;
                     }
                 }
             }
             catch
             {
                 throw new SystemException("Something went wrong while verifiying user.");
+            }
+
+            return result;
+        }
+
+        public async Task<BaseModel<UserModel>> RefreshAccessToken(string refreshToken)
+        {
+            BaseModel<UserModel> result = new BaseModel<UserModel>();
+
+            try
+            {
+                UserRefreshToken userRefreshToken = await _userRefreshTokens.Find(t => t.RefreshToken == refreshToken).FirstOrDefaultAsync();
+
+                if (userRefreshToken == null || userRefreshToken.IsRevoked)
+                {
+                    result.HasError = true;
+                    result.ErrorMessage = "Refresh token not found or revoked.";
+
+                    return result;
+                }
+
+                User user = await _users.Find(u => u.Id == userRefreshToken.UserId).FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    result.HasError = true;
+                    result.ErrorMessage = "User not found.";
+
+                    return result;
+                }
+
+                result.Data = new UserModel
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    CreatedAt = user.CreatedAt,
+                    Type = user.Type,
+                    RefreshToken = refreshToken
+                };
+
+                string token = _jwtProvider.GenerateToken(result.Data);
+
+                result.Data.Token = token;
+            }
+            catch
+            {
+                throw new SystemException("Something went wrong while refreshing access token.");
+            }
+
+            return result;
+        }
+
+        public async Task<BaseModel<bool>> Logout(Guid userId, string token, string refreshToken)
+        {
+            BaseModel<bool> result = new BaseModel<bool>();
+
+            try
+            {
+                var deleteResult = await _userRefreshTokens.DeleteOneAsync(u => u.RefreshToken == refreshToken);
+
+                if (deleteResult.IsAcknowledged)
+                {
+                    InvalidToken invalidToken = new InvalidToken()
+                    {
+                        Token = token
+                    };
+
+                    await _invalidTokens.InsertOneAsync(invalidToken);
+
+                    result.Data = true;
+                }
+                else
+                {
+                    throw new SystemException("Something went wrong while deleting access token.");
+                }
+            }
+            catch (System.Exception)
+            {
+                throw new SystemException("Something went wrong while deleting access token.");
+            }
+
+            return result;
+        }
+
+        public async Task<BaseModel<bool>> Introspect(string token)
+        {
+            BaseModel<bool> result = new BaseModel<bool>();
+
+            try
+            {
+                bool isInvalidToken = await _invalidTokens.Find(t => t.Token == token).AnyAsync();
+
+                result.Data = isInvalidToken;
+            }
+            catch
+            {
+                throw new SystemException("Something went wrong while introspecting access token.");
             }
 
             return result;

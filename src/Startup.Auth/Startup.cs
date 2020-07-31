@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Startup.Auth.Entities;
 using Startup.Auth.Models;
 using Startup.Auth.Provider;
 using Startup.Auth.Services;
@@ -44,6 +46,7 @@ namespace Startup.Auth
 
             services.AddTransient<IUserService, UserService>();
             services.AddSingleton<IJwtProvider, JwtProvider>();
+            services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
             services.AddControllers();
         }
 
@@ -55,7 +58,10 @@ namespace Startup.Auth
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            app.UseCors(
+                           options => options.SetIsOriginAllowed(x => _ = true).AllowAnyMethod().AllowAnyHeader().AllowCredentials()
+                       );
+            // app.UseHttpsRedirection();
 
             app.UseRouting();
 
