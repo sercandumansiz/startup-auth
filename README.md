@@ -14,7 +14,6 @@ MongoDB
 - [x] Login
 - [x] Refresh Token
 - [x] Logout
-- [ ] Performance Optimization
 - [ ] Remove Unnecassary Codes
 - [ ] Better Error Handling
 - [ ] Write Unit Tests
